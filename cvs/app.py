@@ -1,14 +1,14 @@
-import os
-import ctypes
-import sys
 import hashlib
-import zlib
-import glob
 import logging
-from cvs.models import TreeNode, FileIndex
-from cvs import const
+import os
+import subprocess
+import sys
+import zlib
 from pathlib import Path
-from datetime import datetime
+
+from cvs import const
+from cvs.index import FileIndex
+from cvs.models import TreeNode
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +24,8 @@ class VersionsSystem:
 
     def init_command(self):
         os.mkdir(".cvs")
+        if sys.platform.startswith("win32"):
+            subprocess.call(['attrib', '+h', ".cvs"])
         os.mkdir(self.path_to_refs)
         os.mkdir(self.path_to_objects)
         with open(self.path_to_index, "w"):
@@ -32,11 +34,13 @@ class VersionsSystem:
             file.write(os.path.join(".cvs", "refs", "master"))
 
     def add_command(self, path: str):
+        path = os.path.relpath(path)
         current_index = FileIndex(const.INDEX_PATH)
-        path_to_crawl = os.path.join(path, "**")
-        for line in glob.glob(path_to_crawl, recursive=True):
-            if Path(line).is_file():
-                current_index.add_file(os.path.relpath(line))
+        if os.path.isfile(path):
+            current_index.add_file(path)
+        files_to_add = [str(x) for x in Path(path).glob("**/*") if x.is_file()]
+        for file in files_to_add:
+            current_index.add_file(file)
         current_index.refresh_index_file()
 
     def make_commit(self, message: str):
