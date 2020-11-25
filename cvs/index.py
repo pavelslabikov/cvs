@@ -1,72 +1,69 @@
-import hashlib
+import logging
 import os
-import zlib
 from pathlib import Path
-from typing import Dict, Set
+from typing import Set, List, Dict
 from cvs import const
-from cvs.models import logger
+from cvs.blobs import Blob, BlobManager
+
+logger = logging.getLogger(__name__)
 
 
 class FileIndex:
     def __init__(self, path_to_index: str):
         self.path = path_to_index
-        self.content = self.extract_from_index()
-        self.ignored_files = self.get_ignored_files()
+        self._indexed_files = self.extract_from_index()
+        self._ignored_files = self.get_ignored_files()
 
     @property
     def is_empty(self) -> bool:
-        return not bool(self.content)
+        return not bool(self._indexed_files)
+
+    @property
+    def blobs(self) -> List[Blob]:
+        return sorted(self._indexed_files.values())
 
     def add_file(self, path: str) -> None:
         """Добавление файла в индекс"""
-        current_file = Path(path)
-        if current_file in self.ignored_files:
-            logger.info(f"File {current_file} is ignored")
+        if path in self._ignored_files:
             return
 
-        file_content = current_file.read_bytes()
-        content_to_hash = file_content + str(current_file).encode("utf-8")
-        hash_content = hashlib.sha1(content_to_hash).hexdigest()
-        blob_path = os.path.join(const.OBJECTS_PATH, hash_content)
-        if self.content.get(current_file) == hash_content:
-            logger.info(f"File {current_file} is already indexed")
-            return
-
-        self.content[current_file] = hash_content
+        blob = BlobManager.create_new_blob(file=path)
+        self._indexed_files[path] = blob
+        blob_path = os.path.join(const.OBJECTS_PATH, blob.content_hash)  # TODO: refactor
         with open(blob_path, "bw") as file:
-            file.write(zlib.compress(file_content))
+            file.write(blob.compressed_data)
 
-    def extract_from_index(self) -> Dict[Path, str]:
+    def extract_from_index(self) -> Dict[str, Blob]:
         """Извлечение содержимого файла индекса"""
         result = {}
         with open(self.path, "r") as index:
             for line in index.readlines():
-                filename, content_hash = line.rstrip("\n").split(" ")
-                result[Path(filename)] = content_hash
+                filename, hashcode = line.rstrip("\n").split(" ")
+                blob = BlobManager.get_existing_blob(
+                    file=filename,
+                    hashcode=hashcode
+                )
+                result[filename] = blob
         return result
 
-    def refresh_index_file(self) -> None:
+    def refresh_index_file(self) -> None:  # TODO: refactor
         """Запись содержимого индекса в файл"""
         with open(self.path, "w") as file:
-            for path, hash_content in self.content.items():
-                if path.exists() and path not in self.ignored_files:
-                    logger.info(f"Writing {path} to index file")
-                    file.write(f"{path} {hash_content}\n")
+            for blob in self.blobs:
+                if Path(blob.filename).exists() and \
+                        blob.filename not in self._ignored_files:
+                    file.write(str(blob) + "\n")
 
     @staticmethod
-    def get_ignored_files() -> Set[Path]:
+    def get_ignored_files() -> Set[str]:
         """Получение списка всех игнорируемых файлов"""
         result = set()
         ignore_list = [".cvs"]
         if os.path.exists(".ignore"):
             ignore_list.extend(Path(".ignore").read_text().split("\n"))
-        for line in ignore_list:
-            if line.startswith("#") or not line:
-                continue
+        for line in filter(lambda x: x, ignore_list):
             if line.endswith("/"):
-                for path in Path().glob(line + "/**/*"):
-                    result.add(path)
-            else:
-                for path in Path().glob(line):
-                    result.add(path)
+                line += "/**/*"
+            for path in Path().glob(line):
+                result.add(str(path))
         return result
