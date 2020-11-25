@@ -3,39 +3,35 @@ import logging
 import os
 import subprocess
 import sys
-import zlib
 from pathlib import Path
-
-from cvs import const
 from cvs.index import FileIndex
-from cvs.models import TreeNode
+from cvs.models import TreeManager
+from cvs.view import BaseView
 
 logger = logging.getLogger(__name__)
 
 
 class VersionsSystem:
-    def __init__(self):
-        self.path_to_objects = os.path.join(".cvs", "objects")
-        self.path_to_index = os.path.join(".cvs", "index")
-        self.path_to_head = os.path.join(".cvs", "HEAD")
-        self.path_to_ignore = ".ignore"
-        self.path_to_refs = os.path.join(".cvs", "refs")
-        self.root = TreeNode(".")
+    def __init__(self, view: BaseView):
+        self._view = view
+        self.path_to_objects = Path(".cvs/objects")
+        self.path_to_index = Path(".cvs/index")
+        self.path_to_head = Path(".cvs/HEAD")
+        self.path_to_ignore = Path(".ignore")
+        self.path_to_refs = Path(".cvs/refs")
 
-    def init_command(self):
+    def initialize_context(self):
         os.mkdir(".cvs")
         if sys.platform.startswith("win32"):
             subprocess.call(['attrib', '+h', ".cvs"])
-        os.mkdir(self.path_to_refs)
-        os.mkdir(self.path_to_objects)
-        with open(self.path_to_index, "w"):
-            pass
-        with open(self.path_to_head, "w") as file:
-            file.write(os.path.join(".cvs", "refs", "master"))
+        self.path_to_refs.mkdir()
+        self.path_to_objects.mkdir()
+        self.path_to_index.write_text("")
+        self.path_to_head.write_text(os.path.join(".cvs", "refs", "master"))
 
     def add_command(self, path: str):
         path = os.path.relpath(path)
-        current_index = FileIndex(const.INDEX_PATH)
+        current_index = FileIndex(str(self.path_to_index))
         if os.path.isfile(path):
             current_index.add_file(path)
         files_to_add = [str(x) for x in Path(path).glob("**/*") if x.is_file()]
@@ -44,28 +40,22 @@ class VersionsSystem:
         current_index.refresh_index_file()
 
     def make_commit(self, message: str):
-        self.build_tree()
-        root_hash = self.root.get_hash()
-        commit_content = f"tree {root_hash}\n" \
+        current_index = FileIndex(str(self.path_to_index))
+        if current_index.is_empty:
+            self._view.display_text("Nothing to commit")
+            return
+        root_tree = TreeManager.create_new_tree(current_index.blobs)
+        root_hash = root_tree.get_hash()
+        commit_content = f"tree {root_hash} {root_tree.name}\n" \
                          f"parent {self.get_last_commit()}\n\n" \
                          f"{message}"
         commit_hash = hashlib.sha1(commit_content.encode("utf-8")).hexdigest()
-        commit_path = os.path.join(self.path_to_objects, commit_hash)
-        with open(self.path_to_head, "r") as file:
-            current_branch = file.read()
+        commit_path = self.path_to_objects / commit_hash
+        current_branch = self.path_to_head.read_text()
         with open(current_branch, "w") as file:
             file.write(commit_hash)
-        with open(commit_path, "w") as commit_obj:
-            commit_obj.write(commit_content)
-        self.create_tree_objects(self.root)
-
-    def get_last_commit(self) -> str:
-        with open(self.path_to_head, "r") as file:
-            path_to_branch = file.read()
-        if not os.path.exists(path_to_branch):
-            return "root"
-        with open(path_to_branch, "r") as file:
-            return file.read()
+        commit_path.write_text(commit_content)
+        TreeManager.create_tree_objects(root_tree)
 
     def log_command(self):
         with open(self.path_to_head, "r") as file:
@@ -85,36 +75,9 @@ class VersionsSystem:
                 print(commit_content)
                 last_commit = commit_content[1].split(" ")[1].rstrip("\n")
 
-    def build_tree(self):
-        with open(self.path_to_index, "r") as index:
-            for line in index.readlines():
-                if not line.rstrip("\n"):
-                    continue
-                path, blob_name = line.split(" ")
-                path_to_blob = os.path.join(".cvs", "objects", blob_name.rstrip("\n"))
-                file_content = bytearray()
-                with open(path_to_blob, "br") as file:
-                    file_content += file.read()
-                file_content = zlib.decompress(file_content)
-                file_content = file_content + path.encode("utf-8")
-                curr_node = self.root
-                for file in path.split(os.sep):
-                    if curr_node.has_child(file):
-                        curr_node.update_hash(file_content)
-                        curr_node = curr_node.get_child(file)
-                    else:
-                        new_node = TreeNode(file)
-                        curr_node.add_child(new_node)
-                        curr_node.update_hash(file_content)
-                        curr_node = new_node
-                curr_node.update_hash(file_content)
-
-    def create_tree_objects(self, start_tree: TreeNode):
-        if start_tree.get_type() == "blob":
-            return
-        curr_obj_path = os.path.join(self.path_to_objects, start_tree.get_hash())
-        with open(curr_obj_path, "w") as file:
-            for filename, tree in start_tree.children.items():
-                file.write(f"{tree.get_type()} {tree.get_hash()} {tree.name}\n")
-        for tree in start_tree.children.values():
-            self.create_tree_objects(tree)
+    def get_last_commit(self) -> str:
+        path_to_branch = self.path_to_head.read_text()
+        if not os.path.exists(path_to_branch):
+            return "root"
+        with open(path_to_branch, "r") as file:
+            return file.read()
