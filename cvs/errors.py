@@ -16,3 +16,11 @@ class RepoNotFoundError(APIError):
 
     def __str__(self):
         return f"Не удалось найти репозиторий в {self.arg}"
+
+
+class InvalidPathError(APIError):
+    def __init__(self, path: str):
+        self.arg = path
+
+    def __str__(self):
+        return f"Недопустимый путь для индексирования - {self.arg}"

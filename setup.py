@@ -4,8 +4,8 @@ with open("requirements.txt") as f:
     requirements = [x.strip() for x in f]
 
 setuptools.setup(
-    name="concurrent-versions-system",
-    version="3.0",
+    name="cvs",
+    version="1.0",
     author="Pavel Slabikov",
     author_email="author@example.com",
     description="Simple git realization",
