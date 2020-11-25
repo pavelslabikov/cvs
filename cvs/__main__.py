@@ -1,25 +1,22 @@
 import argparse
 import logging
-import os
 from cvs import errors
 from cvs.app import VersionsSystem
-from cvs.validator import CommandValidator
+from cvs.view import CliView
+from cvs import commands
 
 # tempfile.tempdir
-def validate_args(args) -> None:
-    app = VersionsSystem()
+
+
+def get_command() -> commands.CvsCommand:
     if args.command == "init" or args.command == "ini":
-        CommandValidator.validate_init()
-        app.init_command()
+        return commands.InitCommand(app)
     elif args.command == "add":
-        CommandValidator.validate_add(args.path)
-        app.add_command(args.path)
+        return commands.AddCommand(app, args.path)
     elif args.command == "log":
-        CommandValidator.validate_log()
-        app.log_command()
+        return commands.LogCommand(app)
     elif args.command == "commit" or args.command == "com":
-        CommandValidator.validate_commit()
-        app.make_commit(args.comment)
+        return commands.CommitCommand(app, args.comment)
 
 
 def set_up_arguments() -> None:
@@ -39,15 +36,16 @@ if __name__ == "__main__":
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     set_up_arguments()
-    cmd_args = parser.parse_args()
+    args = parser.parse_args()
+    app = VersionsSystem(CliView())
+
     logging.basicConfig(format="[%(levelname)s]: %(asctime)s | in %(name)s | %(message)s",
-                        level=logging.DEBUG if cmd_args.debug else logging.ERROR)
+                        level=logging.DEBUG if args.debug else logging.ERROR)
     logger = logging.getLogger(__name__)
     try:
-        logger.info("Validating arguments")
-        validate_args(cmd_args)
-        logger.info("Executing command")
-
+        command = get_command()
+        logger.info(f"Executing command: {args.command}")
+        command.execute()
     except errors.APIError as e:
         logger.error(f"API error occurred: {str(e)}")
     except Exception as e:
