@@ -1,11 +1,10 @@
-import hashlib
 import logging
 import os
 import subprocess
 import sys
 from pathlib import Path
 from cvs.index import FileIndex
-from cvs.models import TreeManager
+from cvs.models import TreeManager, CommitManager
 from cvs.view import BaseView
 
 logger = logging.getLogger(__name__)
@@ -29,7 +28,7 @@ class VersionsSystem:
         self.path_to_index.write_text("")
         self.path_to_head.write_text(os.path.join(".cvs", "refs", "master"))
 
-    def add_command(self, path: str):
+    def add_to_staging_area(self, path: str):
         path = os.path.relpath(path)
         current_index = FileIndex(str(self.path_to_index))
         if os.path.isfile(path):
@@ -42,20 +41,22 @@ class VersionsSystem:
     def make_commit(self, message: str):
         current_index = FileIndex(str(self.path_to_index))
         if current_index.is_empty:
-            self._view.display_text("Nothing to commit")
+            self._view.display_text("Nothing to commit - index is empty")
             return
+
         root_tree = TreeManager.create_new_tree(current_index.blobs)
-        root_hash = root_tree.get_hash()
-        commit_content = f"tree {root_hash} {root_tree.name}\n" \
-                         f"parent {self.get_last_commit()}\n\n" \
-                         f"{message}"
-        commit_hash = hashlib.sha1(commit_content.encode("utf-8")).hexdigest()
-        commit_path = self.path_to_objects / commit_hash
+        commit = CommitManager.create_new_commit(root_tree, message)
+        if commit.is_same_with_parent():
+            self._view.display_text("Nothing to commit - no changes detected")
+            return
+
         current_branch = self.path_to_head.read_text()
         with open(current_branch, "w") as file:
-            file.write(commit_hash)
-        commit_path.write_text(commit_content)
-        TreeManager.create_tree_objects(root_tree)
+            file.write(commit.get_hash())
+        commit_path = self.path_to_objects / commit.get_hash()
+        commit_path.write_text(str(commit))
+        TreeManager.create_tree_files(root_tree)
+        self._view.display_text(f"Created new commit: {commit.get_hash()}")
 
     def log_command(self):
         with open(self.path_to_head, "r") as file:
@@ -74,10 +75,3 @@ class VersionsSystem:
                 commit_content = file.readlines()
                 print(commit_content)
                 last_commit = commit_content[1].split(" ")[1].rstrip("\n")
-
-    def get_last_commit(self) -> str:
-        path_to_branch = self.path_to_head.read_text()
-        if not os.path.exists(path_to_branch):
-            return "root"
-        with open(path_to_branch, "r") as file:
-            return file.read()
