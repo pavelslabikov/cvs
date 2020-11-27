@@ -9,12 +9,12 @@ logger = logging.getLogger(__name__)
 
 
 class FileIndex:
-    def __init__(self, path_to_index: str):
+    def __init__(self, path_to_index: str, ignore_file_path: str):
         self._location = Path(path_to_index)
         if not self._location.exists():
             raise errors.IndexFileNotFoundError(path_to_index)
         self._indexed_files = self.get_indexed_files()
-        self._ignored_files = self.get_ignored_files()
+        self._ignored_files = self.get_ignored_files(ignore_file_path)
 
     @property
     def is_empty(self) -> bool:
@@ -30,14 +30,12 @@ class FileIndex:
             return
 
         blob = BlobManager.create_new_blob(file=path)
-        if self._indexed_files.get(path).content_hash == blob.content_hash:
+        if self._indexed_files.get(path) == blob:
             logger.info(f"File {path} is already indexed!")
             return
 
         self._indexed_files[path] = blob
-        path_to_blob = BlobManager.BLOB_STORAGE / blob.content_hash
-        with path_to_blob.open("bw") as file:
-            file.write(blob.compressed_data)
+        BlobManager.create_blob_file(blob)
 
     def get_indexed_files(self) -> Dict[str, Blob]:
         """Извлечение содержимого файла индекса"""
@@ -62,14 +60,14 @@ class FileIndex:
         self._location.write_text("\n".join(content_to_write))
 
     @staticmethod
-    def get_ignored_files() -> Set[str]:
+    def get_ignored_files(ignore_file: str) -> Set[str]:
         """Получение списка всех игнорируемых файлов"""
         result = set()
         ignore_list = [".cvs/"]
-        ignore_file = Path(".ignore")
+        ignore_file = Path(ignore_file)
         if ignore_file.exists():
-            ignore_list.extend(ignore_file.read_text().split("\n"))
-        for line in filter(lambda x: x, ignore_list):
+            ignore_list.extend(ignore_file.read_text().splitlines())
+        for line in ignore_list:
             if line.endswith("/"):
                 line += "/**/*"
             for path in Path().glob(line):

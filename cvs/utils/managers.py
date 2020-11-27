@@ -9,10 +9,10 @@ from cvs.models.blob import Blob
 from cvs.models.commit import Commit
 from cvs.models.tree import TreeNode
 
+OBJECT_STORAGE = Path(".cvs", "objects")
+
 
 class TreeManager:
-    TREE_STORAGE = Path(".cvs", "objects")
-
     @classmethod
     def create_new_tree(cls, blobs: Iterable[Blob]) -> TreeNode:
         root = TreeNode(".")
@@ -32,7 +32,7 @@ class TreeManager:
     @classmethod
     def create_tree_files(cls, start_tree: TreeNode) -> None:
         for tree in anytree.LevelOrderIter(start_tree, lambda node: not node.is_leaf):
-            curr_obj_path = cls.TREE_STORAGE / tree.get_hash()
+            curr_obj_path = OBJECT_STORAGE / tree.get_hash()
             content = []
             for child in tree.children:
                 content.append(str(child))
@@ -41,11 +41,9 @@ class TreeManager:
 
 
 class BlobManager:
-    BLOB_STORAGE = Path(".cvs/objects")
-
     @classmethod
     def get_existing_blob(cls, file: str, hashcode: str) -> Blob:
-        path_to_blob = cls.BLOB_STORAGE / hashcode
+        path_to_blob = OBJECT_STORAGE / hashcode
         compressed_data = path_to_blob.read_bytes()
         return Blob(file, hashcode, compressed_data)
 
@@ -54,6 +52,13 @@ class BlobManager:
         compressed_data = cls._get_compressed_content(file)
         hashcode = cls._evaluate_hash(compressed_data)
         return Blob(file, hashcode, compressed_data)
+
+    @classmethod
+    def create_blob_file(cls, blob: Blob) -> None:
+        """Создание файла по объекту Blob"""
+        path_to_blob = OBJECT_STORAGE / blob.content_hash
+        with path_to_blob.open("bw") as file:
+            file.write(blob.compressed_data)
 
     @classmethod
     def _evaluate_hash(cls, data: bytes) -> str:
@@ -66,8 +71,6 @@ class BlobManager:
 
 
 class CommitManager:
-    COMMIT_STORAGE = Path(".cvs", "objects")
-
     @classmethod
     def create_new_commit(cls, tree: TreeNode, message: str) -> Commit:
         current_branch = Path(".cvs/HEAD").read_text()
@@ -75,3 +78,8 @@ class CommitManager:
             return Commit(tree, message, "root")
         with open(current_branch, "r") as file:
             return Commit(tree, message, file.read())
+
+    @classmethod
+    def create_commit_file(cls, commit: Commit):
+        commit_path = OBJECT_STORAGE / commit.get_hash()
+        commit_path.write_text(str(commit))

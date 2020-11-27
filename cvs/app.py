@@ -31,7 +31,7 @@ class VersionsSystem:
 
     def add_to_staging_area(self, path: str):
         path = os.path.relpath(path)
-        current_index = FileIndex(str(self.path_to_index))
+        current_index = FileIndex(str(self.path_to_index), str(self.path_to_ignore))
         if os.path.isfile(path):
             current_index.add_file(path)
         files_to_add = [str(x) for x in Path(path).glob("**/*") if x.is_file()]
@@ -40,7 +40,7 @@ class VersionsSystem:
         current_index.refresh_index_file()
 
     def make_commit(self, message: str):
-        current_index = FileIndex(str(self.path_to_index))
+        current_index = FileIndex(str(self.path_to_index), str(self.path_to_ignore))
         if current_index.is_empty:
             self._view.display_text("Nothing to commit - index is empty")
             return
@@ -54,25 +54,23 @@ class VersionsSystem:
         current_branch = self.path_to_head.read_text()
         with open(current_branch, "w") as file:
             file.write(commit.get_hash())
-        commit_path = self.path_to_objects / commit.get_hash()
-        commit_path.write_text(str(commit))
+        CommitManager.create_commit_file(commit)
         TreeManager.create_tree_files(root_tree)
         self._view.display_text(f"Created new commit: {commit.get_hash()}")
 
     def log_command(self):
-        with open(self.path_to_head, "r") as file:
-            path_to_branch = file.read()
-        logger.debug(f"Path to branch in HEAD: {path_to_branch}")
-        if not os.path.exists(path_to_branch):
-            print(f"No commit history for branch {path_to_branch}")
+        current_branch = self.path_to_head.read_text()
+        logger.debug(f"Path to branch in HEAD: {current_branch}")
+        if not os.path.exists(current_branch):
+            self._view.display_text(f"No commit history for branch {current_branch}")
             return
-        with open(path_to_branch, "r") as file:
+
+        with open(current_branch, "r") as file:
             last_commit = file.read()
         logger.debug(f"Last commit hash: {last_commit}")
         while last_commit != "root":
             logger.debug(f"Current commit hash: {last_commit}")
-            path_to_commit = os.path.join(self.path_to_objects, last_commit)
-            with open(path_to_commit, "r") as file:
-                commit_content = file.readlines()
-                print(commit_content)
-                last_commit = commit_content[1].split(" ")[1].rstrip("\n")
+            path_to_commit = self.path_to_objects / last_commit
+            commit_content = path_to_commit.read_text()
+            self._view.display_text(commit_content)
+            last_commit = commit_content.splitlines()[1].split(" ")[1]
