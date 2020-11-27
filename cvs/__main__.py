@@ -8,19 +8,19 @@ from cvs import commands
 # tempfile.tempdir
 
 
-def get_command() -> commands.CvsCommand:
-    if args.command == "init" or args.command == "ini":
+def get_command(command_name: str) -> commands.CvsCommand:
+    if command_name == "init" or command_name == "ini":
         return commands.InitCommand(app)
-    elif args.command == "add":
-        return commands.AddCommand(app, args.path)
-    elif args.command == "log":
+    elif command_name == "add":
+        return commands.AddCommand(app, cmd_args.path)
+    elif command_name == "log":
         return commands.LogCommand(app)
-    elif args.command == "commit" or args.command == "com":
-        return commands.CommitCommand(app, args.comment)
+    elif command_name == "commit" or command_name == "com":
+        return commands.CommitCommand(app, cmd_args.comment)
 
 
 def set_up_arguments() -> None:
-    subparsers = parser.add_subparsers(dest="command")
+    subparsers = parser.add_subparsers(dest="command", required=True, metavar="<command>")
     subparsers.add_parser("init", help="Инициализировать репозиторий", aliases=["ini"])
     parser_commit = subparsers.add_parser("commit", help="Сделать коммит", aliases=["com"])
     parser_add = subparsers.add_parser("add", help="Индексировать файл(ы)")
@@ -36,15 +36,15 @@ if __name__ == "__main__":
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     set_up_arguments()
-    args = parser.parse_args()
+    cmd_args = parser.parse_args()
     app = VersionsSystem(CliView())
 
     logging.basicConfig(format="[%(levelname)s]: %(asctime)s | in %(name)s | %(message)s",
-                        level=logging.DEBUG if args.debug else logging.ERROR)
+                        level=logging.DEBUG if cmd_args.debug else logging.ERROR)
     logger = logging.getLogger(__name__)
     try:
-        command = get_command()
-        logger.info(f"Executing command: {args.command}")
+        command = get_command(cmd_args.command)
+        logger.info(f"Executing command: {cmd_args.command}")
         command.execute()
     except errors.APIError as e:
         logger.error(f"API error occurred: {str(e)}")

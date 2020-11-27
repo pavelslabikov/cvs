@@ -42,7 +42,7 @@ class AddCommand(CvsCommand):
             raise errors.RepoNotFoundError(path_to_add)
 
     def _execute(self, path_to_index: str):
-        self._app.add_command(path=path_to_index)
+        self._app.add_to_staging_area(path=path_to_index)
 
 
 class CommitCommand(CvsCommand):
