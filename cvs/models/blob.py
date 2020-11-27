@@ -12,6 +12,12 @@ class Blob:
     def filename(self) -> str:
         return self._filename
 
+    def __eq__(self, other: object) -> bool:
+        if other is None or not isinstance(other, Blob):
+            return False
+        return self.filename == other.filename and \
+            self.content_hash == other.content_hash
+
     def __lt__(self, other):
         return str(self) < str(other)
 
