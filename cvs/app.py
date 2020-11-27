@@ -2,9 +2,10 @@ import logging
 import os
 import subprocess
 import sys
+
 from pathlib import Path
-from cvs.index import FileIndex
-from cvs.models import TreeManager, CommitManager
+from cvs.models.index import FileIndex
+from cvs.utils.managers import TreeManager, CommitManager
 from cvs.view import BaseView
 
 logger = logging.getLogger(__name__)

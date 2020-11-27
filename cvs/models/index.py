@@ -2,7 +2,8 @@ import logging
 from cvs import errors
 from pathlib import Path
 from typing import Set, List, Dict
-from cvs.blobs import Blob, BlobManager
+from cvs.models.blob import Blob
+from cvs.utils.managers import BlobManager
 
 logger = logging.getLogger(__name__)
 
