@@ -5,7 +5,8 @@ import sys
 
 from pathlib import Path
 from cvs.models.index import FileIndex
-from cvs.utils.managers import TreeManager, CommitManager
+from cvs.utils.factories import TreeFactory, CommitFactory
+from cvs.utils.file_managers import FileCreator
 from cvs.view import BaseView
 
 logger = logging.getLogger(__name__)
@@ -51,17 +52,18 @@ class VersionsSystem:
             self._view.display_text("Nothing to commit - index is empty")
             return
 
-        root_tree = TreeManager.create_new_tree(current_index.blobs)
-        commit = CommitManager.create_new_commit(root_tree, message)
+        root_tree = TreeFactory.create_new_tree(current_index.blobs)
+        commit = CommitFactory.create_new_commit(root_tree, message)
         if commit.is_same_with_parent():
             self._view.display_text("Nothing to commit - no changes detected")
             return
 
+        FileCreator.create_commit_file(commit, str(self.path_to_commits))
+        FileCreator.create_tree_files(root_tree, str(self.path_to_trees))
+
         current_branch = self.path_to_head.read_text()
         with open(current_branch, "w") as file:
             file.write(commit.get_hash())
-        CommitManager.create_commit_file(commit)
-        TreeManager.create_tree_files(root_tree)
         self._view.display_text(f"Created new commit: {commit.get_hash()}")
 
     def show_logs(self):

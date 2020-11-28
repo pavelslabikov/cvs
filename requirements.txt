@@ -1,3 +1,4 @@
 toml==0.10.1
 coverage==5.0.4
 anytree==2.8.0
+pytest

@@ -12,14 +12,12 @@ from cvs.models.tree import TreeNode
 OBJECT_STORAGE = Path(".cvs", "objects")
 
 
-class TreeManager:
-    TREE_STORAGE = OBJECT_STORAGE / "trees"
-
+class TreeFactory:
     @classmethod
     def create_new_tree(cls, blobs: Iterable[Blob]) -> TreeNode:
         root = TreeNode(".")
         for blob in blobs:
-            file_content = blob.compressed_data
+            file_content = bytes(blob)
             curr_node = root
             for file in blob.filename.split(os.sep):
                 curr_node.update_hash(file_content)
@@ -31,40 +29,19 @@ class TreeManager:
             curr_node.update_hash(file_content)
         return root
 
-    @classmethod
-    def create_tree_files(cls, start_tree: TreeNode) -> None:
-        for tree in anytree.LevelOrderIter(start_tree, lambda node: not node.is_leaf):
-            curr_obj_path = cls.TREE_STORAGE/ tree.get_hash()
-            content = [str(child) for child in tree.children]
-            with curr_obj_path.open("w") as file:
-                file.write("\n".join(content))
 
-
-class BlobManager:
-    BLOB_STORAGE = OBJECT_STORAGE / "blobs"
-
+class BlobFactory:
     @classmethod
     def get_existing_blob(cls, file: str, hashcode: str) -> Blob:
-        path_to_blob = cls.BLOB_STORAGE / hashcode
+        path_to_blob = self.storage / hashcode
         compressed_data = path_to_blob.read_bytes()
         return Blob(file, hashcode, compressed_data)
 
     @classmethod
     def create_new_blob(cls, file: str) -> Blob:
         compressed_data = cls._get_compressed_content(file)
-        hashcode = cls._evaluate_hash(compressed_data)
+        hashcode = hashlib.sha1(compressed_data).hexdigest()
         return Blob(file, hashcode, compressed_data)
-
-    @classmethod
-    def create_blob_file(cls, blob: Blob) -> None:
-        """Создание файла по объекту Blob"""
-        path_to_blob = cls.BLOB_STORAGE / blob.content_hash
-        with path_to_blob.open("bw") as file:
-            file.write(blob.compressed_data)
-
-    @classmethod
-    def _evaluate_hash(cls, data: bytes) -> str:
-        return hashlib.sha1(data).hexdigest()
 
     @classmethod
     def _get_compressed_content(cls, file: str) -> bytes:
@@ -72,18 +49,11 @@ class BlobManager:
         return zlib.compress(file_content)
 
 
-class CommitManager:
-    COMMIT_STORAGE = OBJECT_STORAGE / "commits"
-
+class CommitFactory:
     @classmethod
     def create_new_commit(cls, tree: TreeNode, message: str) -> Commit:
-        current_branch = Path(".cvs/HEAD").read_text()
+        current_branch = Path(".cvs/HEAD").read_text()  # TODO: fix
         if not os.path.exists(current_branch):
             return Commit(tree, message, "root")
         with open(current_branch, "r") as file:
             return Commit(tree, message, file.read())
-
-    @classmethod
-    def create_commit_file(cls, commit: Commit):
-        commit_path = cls.COMMIT_STORAGE / commit.get_hash()
-        commit_path.write_text(str(commit))

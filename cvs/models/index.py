@@ -3,7 +3,7 @@ from cvs import errors
 from pathlib import Path
 from typing import Set, List, Dict
 from cvs.models.blob import Blob
-from cvs.utils.managers import BlobManager
+from cvs.utils.factories import BlobFactory
 
 logger = logging.getLogger(__name__)
 
@@ -29,13 +29,13 @@ class FileIndex:
         if path in self._ignored_files:
             return
 
-        blob = BlobManager.create_new_blob(file=path)
+        blob = BlobFactory.create_new_blob(file=path)
         if self._indexed_files.get(path) == blob:
             logger.info(f"File {path} is already indexed!")
             return
 
         self._indexed_files[path] = blob
-        BlobManager.create_blob_file(blob)
+        BlobFactory.create_blob_file(blob)
 
     def get_indexed_files(self) -> Dict[str, Blob]:
         """Извлечение содержимого файла индекса"""
@@ -43,7 +43,7 @@ class FileIndex:
         file_content = self._location.read_text().splitlines()
         for line in file_content:
             filename, hashcode = line.split(" ")
-            blob = BlobManager.get_existing_blob(
+            blob = BlobFactory.get_existing_blob(
                 file=filename,
                 hashcode=hashcode
             )

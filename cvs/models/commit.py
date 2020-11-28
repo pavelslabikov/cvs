@@ -12,7 +12,7 @@ class Commit:
         return hashlib.sha1(str(self).encode("utf-8")).hexdigest()
 
     def is_same_with_parent(self) -> bool:
-        from cvs.utils.managers import OBJECT_STORAGE
+        from cvs.utils.factories import OBJECT_STORAGE
         if self.parent == "root":
             return False
 

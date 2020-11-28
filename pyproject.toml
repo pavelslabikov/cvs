@@ -16,4 +16,4 @@ exclude = '''
 
 [tool.coverage.run]
 source = ["cvs"]
-omit = ["cvs/__main__.py", "setup.py", cvs/__init__.py]
+omit = ["cvs/__main__.py", "setup.py", "cvs/__init__.py"]
