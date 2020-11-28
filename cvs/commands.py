@@ -28,7 +28,7 @@ class InitCommand(CvsCommand):
             raise errors.RepoAlreadyExistError(os.getcwd())
 
     def _execute(self):
-        self._app.initialize_context()
+        self._app.initialize_repo()
 
 
 class AddCommand(CvsCommand):
@@ -60,4 +60,4 @@ class LogCommand(CvsCommand):
             raise errors.RepoNotFoundError(os.getcwd())
 
     def _execute(self):
-        self._app.log_command()
+        self._app.show_logs()

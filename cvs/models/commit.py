@@ -1,5 +1,4 @@
 import hashlib
-from pathlib import Path
 from cvs.models.tree import TreeNode
 
 
@@ -13,10 +12,11 @@ class Commit:
         return hashlib.sha1(str(self).encode("utf-8")).hexdigest()
 
     def is_same_with_parent(self) -> bool:
+        from cvs.utils.managers import OBJECT_STORAGE
         if self.parent == "root":
             return False
 
-        commit_content = Path(f".cvs/objects/{self.parent}").read_text()
+        commit_content = (OBJECT_STORAGE / "commits" / self.parent).read_text()  # TODO: fix
         return commit_content.startswith(str(self.tree))
 
     def __str__(self):
