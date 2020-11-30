@@ -66,8 +66,8 @@ class FileIndex:
         result = set()
         ignore_list = [".cvs/"]
         if ignore_file.exists():
-            ignore_list.extend(ignore_file.read_text().splitlines())
-        for line in ignore_list:
+            ignore_list.extend(ignore_file.read_text().split("\n"))
+        for line in filter(lambda x: x, ignore_list):
             if line.endswith("/"):
                 line += "/**/*"
             for path in Path().glob(line):

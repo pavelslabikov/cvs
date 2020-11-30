@@ -46,14 +46,16 @@ class VersionsSystem:
 
         commit.create_file(str(config.COMMITS_PATH))
         root_tree.create_file(str(config.TREES_PATH))
-        with open(self._current_branch, "w") as file:
+        current_branch = config.HEAD_PATH.read_text()
+        with open(current_branch, "w") as file:
             file.write(commit.get_hash())
         self._view.display_text(f"Created new commit: {commit.get_hash()}")
 
     def show_logs(self) -> None:
-        branch_file = Path(self._current_branch)
+        current_branch = config.HEAD_PATH.read_text()
+        branch_file = Path(current_branch)
         if not branch_file.exists():
-            self._view.display_text(f"No commit history for branch {self._current_branch}")
+            self._view.display_text(f"No commit history for branch {current_branch}")
             return
 
         last_commit = branch_file.read_text()
