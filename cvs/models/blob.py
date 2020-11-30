@@ -1,3 +1,6 @@
+from pathlib import Path
+
+
 class Blob:
     def __init__(self, filename: str, hashcode: str, data: bytes):
         self._filename = filename
@@ -12,6 +15,10 @@ class Blob:
     def filename(self) -> str:
         return self._filename
 
+    def create_file(self, destination: str) -> None:
+        path_to_blob = Path(destination) / self.content_hash
+        path_to_blob.write_bytes(self._compressed_data)
+
     def __eq__(self, other: object) -> bool:
         if other is None or not isinstance(other, Blob):
             return False
@@ -23,6 +30,3 @@ class Blob:
 
     def __str__(self):
         return f"{self._filename} {self._content_hash}"
-
-    def __bytes__(self):
-        return self._compressed_data
