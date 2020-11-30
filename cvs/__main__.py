@@ -5,8 +5,6 @@ from cvs.app import VersionsSystem
 from cvs.view import CliView
 from cvs import commands
 
-# tempfile.tempdir
-
 
 def get_command(command_name: str) -> commands.CvsCommand:
     if command_name == "init" or command_name == "ini":
