@@ -18,7 +18,7 @@ IGNORE_PATH = Path(".ignore")
 def create_dirs():
     MAIN_PATH.mkdir()
     if sys.platform.startswith("win32"):
-        subprocess.call(['attrib', '+h', str(MAIN_PATH)])
+        subprocess.call(["attrib", "+h", str(MAIN_PATH)])
     OBJECTS_PATH.mkdir()
     COMMITS_PATH.mkdir()
     BLOBS_PATH.mkdir()

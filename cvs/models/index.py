@@ -45,10 +45,9 @@ class FileIndex:
         result = {}
         file_content = self._location.read_text().splitlines()
         for line in file_content:
-            filename, hashcode = line.split(" ")
+            filename, hashcode = line.rsplit(" ", 1)
             blob = BlobFactory.get_existing_blob(
-                file=filename,
-                hashcode=hashcode
+                file=filename, hashcode=hashcode
             )
             result[filename] = blob
         return result
@@ -57,8 +56,10 @@ class FileIndex:
         """Запись содержимого индекса в файл"""
         content_to_write = []
         for blob in self.blobs:
-            if Path(blob.filename).exists() and \
-                    blob.filename not in self._ignored_files:
+            if (
+                Path(blob.filename).exists()
+                and blob.filename not in self._ignored_files
+            ):
                 content_to_write.append(str(blob))
         self._location.write_text("\n".join(content_to_write))
 

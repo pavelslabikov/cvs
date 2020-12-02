@@ -8,9 +8,11 @@ class Commit:
         self.tree = root
         self.message = message
         self.parent = parent
+        self._hash_obj = hashlib.sha1(str(self).encode("utf-8"))
 
-    def get_hash(self) -> str:
-        return hashlib.sha1(str(self).encode("utf-8")).hexdigest()
+    @property
+    def content_hash(self) -> str:
+        return self._hash_obj.hexdigest()
 
     def is_same_with_parent(self, path_to_storage: str) -> bool:
         parent_path = Path(path_to_storage) / self.parent
@@ -21,10 +23,10 @@ class Commit:
         return commit_content.startswith(str(self.tree))
 
     def create_file(self, destination: str):
-        commit_path = Path(destination) / self.get_hash()
+        commit_path = Path(destination) / self.content_hash
         commit_path.write_text(str(self))
 
     def __str__(self):
-        return f"{str(self.tree)}\n" \
-               f"parent {self.parent}\n\n" \
-               f"{self.message}"
+        return (
+            f"{str(self.tree)}\nparent {self.parent}\n\n{self.message}"
+        )

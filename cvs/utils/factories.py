@@ -1,9 +1,9 @@
 import os
 import zlib
-import anytree
 
 from cvs import config
 from pathlib import Path
+from anytree import search
 from typing import Iterable
 from cvs.models.blob import Blob
 from cvs.models.commit import Commit
@@ -19,7 +19,7 @@ class TreeFactory:
             curr_node = root
             for file in blob.filename.split(os.sep):
                 curr_node.update_hash(file_content)
-                child = anytree.search.find(curr_node, lambda node: node.name == file)
+                child = search.find(curr_node, lambda node: node.name == file)
                 if child:
                     curr_node = child
                 else:

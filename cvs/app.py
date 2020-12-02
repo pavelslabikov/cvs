@@ -26,7 +26,10 @@ class VersionsSystem:
         path = os.path.relpath(path)
         index = FileIndex(str(config.INDEX_PATH), str(config.IGNORE_PATH))
         if os.path.isfile(path):
+            self._view.display_text(f"Adding file {path} to index...")
             index.add_file(path)
+        else:
+            self._view.display_text(f"Adding directory {path} to index...")
         files_to_add = [str(x) for x in Path(path).glob("**/*") if x.is_file()]
         for file in files_to_add:
             index.add_file(file)
@@ -48,14 +51,16 @@ class VersionsSystem:
         root_tree.create_file(str(config.TREES_PATH))
         current_branch = config.HEAD_PATH.read_text()
         with open(current_branch, "w") as file:
-            file.write(commit.get_hash())
-        self._view.display_text(f"Created new commit: {commit.get_hash()}")
+            file.write(commit.content_hash)
+        self._view.display_text(f"Created new commit: {commit.content_hash}")
 
     def show_logs(self) -> None:
         current_branch = config.HEAD_PATH.read_text()
         branch_file = Path(current_branch)
         if not branch_file.exists():
-            self._view.display_text(f"No commit history for branch {current_branch}")
+            self._view.display_text(
+                f"No commit history for branch {current_branch}"
+            )
             return
 
         last_commit = branch_file.read_text()

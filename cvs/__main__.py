@@ -18,15 +18,25 @@ def get_command(command_name: str) -> commands.CvsCommand:
 
 
 def set_up_arguments() -> None:
-    subparsers = parser.add_subparsers(dest="command", required=True, metavar="<command>")
-    subparsers.add_parser("init", help="Инициализировать репозиторий", aliases=["ini"])
-    parser_commit = subparsers.add_parser("commit", help="Сделать коммит", aliases=["com"])
+    subparsers = parser.add_subparsers(
+        dest="command", required=True, metavar="<command>"
+    )
+    subparsers.add_parser(
+        "init", help="Инициализировать репозиторий", aliases=["ini"]
+    )
+    parser_commit = subparsers.add_parser(
+        "commit", help="Сделать коммит", aliases=["com"]
+    )
     parser_add = subparsers.add_parser("add", help="Индексировать файл(ы)")
     subparsers.add_parser("log", help="Вывести историю коммитов")
 
-    parser.add_argument("-d", "--debug", action="store_true", help="Запуск в режиме отладки")
+    parser.add_argument(
+        "-d", "--debug", action="store_true", help="Запуск в режиме отладки"
+    )
     parser_add.add_argument("path", type=str, help="Путь к файлу/директории")
-    parser_commit.add_argument("comment", type=str, help="Комментарий к коммиту")
+    parser_commit.add_argument(
+        "comment", type=str, help="Комментарий к коммиту"
+    )
 
 
 if __name__ == "__main__":
@@ -37,8 +47,9 @@ if __name__ == "__main__":
     cmd_args = parser.parse_args()
     app = VersionsSystem(CliView())
 
-    logging.basicConfig(format="[%(levelname)s]: %(asctime)s | in %(name)s | %(message)s",
-                        level=logging.DEBUG if cmd_args.debug else logging.ERROR)
+    logging.basicConfig(
+        level=logging.DEBUG if cmd_args.debug else logging.ERROR
+    )
     logger = logging.getLogger(__name__)
     try:
         command = get_command(cmd_args.command)
