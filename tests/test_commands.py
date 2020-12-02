@@ -5,12 +5,7 @@ from cvs import commands, errors
 import pytest
 
 
-@pytest.mark.parametrize(
-    "path",
-    [
-        "..", "../../"
-    ]
-)
+@pytest.mark.parametrize("path", ["..", "../../"])
 def test_adding_wrong_path(testing_app, path: str):
     command = commands.AddCommand(testing_app, path)
     try:
@@ -32,12 +27,7 @@ def test_validating_init_command(testing_app):
             assert False
 
 
-@pytest.mark.parametrize(
-    "path",
-    [
-        "___"
-    ]
-)
+@pytest.mark.parametrize("path", ["___", "unknown path"])
 def test_adding_non_existing_path(testing_app, path: str):
     command = commands.AddCommand(testing_app, path)
     try:

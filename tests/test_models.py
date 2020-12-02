@@ -1,5 +1,4 @@
 from pathlib import Path
-from unittest import mock
 
 import pytest
 from cvs.models.blob import Blob
@@ -10,8 +9,7 @@ from cvs.models.index import FileIndex
     "blob",
     [
         Blob("test", b"123"),
-
-    ]
+    ],
 )
 def test_creating_blob_file(temp_dir, blob: Blob):
     blob.create_file(temp_dir.name)
@@ -19,13 +17,7 @@ def test_creating_blob_file(temp_dir, blob: Blob):
     assert expected_file.exists()
 
 
-@pytest.mark.parametrize(
-    "path, file_content",
-    [
-        ("test", "")
-
-    ]
-)
+@pytest.mark.parametrize("path, file_content", [("test", "")])
 def test_adding_to_index(temp_dir, path: str, file_content: str):
     file_to_add = Path(temp_dir.name) / path
     file_to_add.write_text(file_content)
@@ -35,5 +27,3 @@ def test_adding_to_index(temp_dir, path: str, file_content: str):
     index.BLOB_STORAGE = temp_dir.name
     index.add_file(str(file_to_add))
     assert str(file_to_add) in index.indexed_files
-
-
