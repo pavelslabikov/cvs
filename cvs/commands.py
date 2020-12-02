@@ -1,10 +1,13 @@
 import os
 import abc
-from cvs import errors, config
+
+from cvs import errors
 from cvs.app import VersionsSystem
 
 
 class CvsCommand(abc.ABC):
+    from cvs import config
+
     def __init__(self, app: VersionsSystem, *args):
         self._app = app
         self._args = args
@@ -24,7 +27,7 @@ class CvsCommand(abc.ABC):
 
 class InitCommand(CvsCommand):
     def _validate_args(self) -> None:
-        if config.MAIN_PATH.exists():
+        if self.config.MAIN_PATH.exists():
             raise errors.RepoAlreadyExistError(os.getcwd())
 
     def _execute(self):
@@ -38,7 +41,7 @@ class AddCommand(CvsCommand):
             raise errors.InvalidPathError(path_to_add)
         path_to_add = os.path.realpath(path_to_add)
         if os.getcwd() != os.path.commonpath([os.getcwd(), path_to_add]) or \
-                not config.MAIN_PATH.exists():
+                not self.config.MAIN_PATH.exists():
             raise errors.RepoNotFoundError(path_to_add)
 
     def _execute(self, path_to_index: str):
@@ -47,7 +50,7 @@ class AddCommand(CvsCommand):
 
 class CommitCommand(CvsCommand):
     def _validate_args(self) -> None:
-        if not config.MAIN_PATH.exists():
+        if not self.config.MAIN_PATH.exists():
             raise errors.RepoNotFoundError(os.getcwd())
 
     def _execute(self, message: str):
@@ -56,7 +59,7 @@ class CommitCommand(CvsCommand):
 
 class LogCommand(CvsCommand):
     def _validate_args(self) -> None:
-        if not config.MAIN_PATH.exists():
+        if not self.config.MAIN_PATH.exists():
             raise errors.RepoNotFoundError(os.getcwd())
 
     def _execute(self):

@@ -1,11 +1,12 @@
+import hashlib
 from pathlib import Path
 
 
 class Blob:
-    def __init__(self, filename: str, hashcode: str, data: bytes):
+    def __init__(self, filename: str, data: bytes):
         self._filename = filename
-        self._content_hash = hashcode
         self._compressed_data = data
+        self._content_hash = hashlib.sha1(data).hexdigest()
 
     @property
     def content_hash(self) -> str:

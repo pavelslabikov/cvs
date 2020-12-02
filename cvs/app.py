@@ -24,16 +24,16 @@ class VersionsSystem:
 
     def add_to_staging_area(self, path: str) -> None:
         path = os.path.relpath(path)
-        current_index = FileIndex()
+        index = FileIndex(str(config.INDEX_PATH), str(config.IGNORE_PATH))
         if os.path.isfile(path):
-            current_index.add_file(path)
+            index.add_file(path)
         files_to_add = [str(x) for x in Path(path).glob("**/*") if x.is_file()]
         for file in files_to_add:
-            current_index.add_file(file)
-        current_index.refresh_index_file()
+            index.add_file(file)
+        index.refresh_file()
 
     def make_commit(self, message: str) -> None:
-        index = FileIndex()
+        index = FileIndex(str(config.INDEX_PATH), str(config.IGNORE_PATH))
         if index.is_empty:
             self._view.display_text("Nothing to commit - index is empty")
             return

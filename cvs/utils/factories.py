@@ -1,4 +1,3 @@
-import hashlib
 import os
 import zlib
 import anytree
@@ -34,18 +33,13 @@ class BlobFactory:
     def get_existing_blob(cls, file: str, hashcode: str) -> Blob:
         path_to_blob = config.BLOBS_PATH / hashcode
         compressed_data = path_to_blob.read_bytes()
-        return Blob(file, hashcode, compressed_data)
+        return Blob(file, compressed_data)
 
     @classmethod
     def create_new_blob(cls, file: str) -> Blob:
-        compressed_data = cls._get_compressed_content(file)
-        hashcode = hashlib.sha1(compressed_data).hexdigest()
-        return Blob(file, hashcode, compressed_data)
-
-    @classmethod
-    def _get_compressed_content(cls, file: str) -> bytes:
         file_content = Path(file).read_bytes()
-        return zlib.compress(file_content)
+        compressed_data = zlib.compress(file_content)
+        return Blob(file, compressed_data)
 
 
 class CommitFactory:

@@ -10,20 +10,22 @@ logger = logging.getLogger(__name__)
 
 
 class FileIndex:
-    def __init__(self):
-        self._location = config.INDEX_PATH
+    BLOB_STORAGE = str(config.BLOBS_PATH)
+
+    def __init__(self, path_to_index: str, path_to_ignore: str):
+        self._location = Path(path_to_index)
         if not self._location.exists():
-            raise errors.IndexFileNotFoundError(str(self._location))
-        self._indexed_files = self.get_indexed_files()
-        self._ignored_files = self.get_ignored_files(config.IGNORE_PATH)
+            raise errors.IndexFileNotFoundError(path_to_index)
+        self.indexed_files = self.get_indexed_files()
+        self._ignored_files = self.get_ignored_files(path_to_ignore)
 
     @property
     def is_empty(self) -> bool:
-        return not bool(self._indexed_files)
+        return not bool(self.indexed_files)
 
     @property
     def blobs(self) -> List[Blob]:
-        return sorted(self._indexed_files.values())
+        return sorted(self.indexed_files.values())
 
     def add_file(self, path: str) -> None:
         """Добавление файла в индекс"""
@@ -31,12 +33,12 @@ class FileIndex:
             return
 
         blob = BlobFactory.create_new_blob(file=path)
-        if self._indexed_files.get(path) == blob:
+        if self.indexed_files.get(path) == blob:
             logger.info(f"File {path} is already indexed!")
             return
 
-        self._indexed_files[path] = blob
-        blob.create_file(str(config.BLOBS_PATH))
+        self.indexed_files[path] = blob
+        blob.create_file(self.BLOB_STORAGE)
 
     def get_indexed_files(self) -> Dict[str, Blob]:
         """Извлечение содержимого файла индекса"""
@@ -51,7 +53,7 @@ class FileIndex:
             result[filename] = blob
         return result
 
-    def refresh_index_file(self) -> None:
+    def refresh_file(self) -> None:
         """Запись содержимого индекса в файл"""
         content_to_write = []
         for blob in self.blobs:
@@ -61,10 +63,11 @@ class FileIndex:
         self._location.write_text("\n".join(content_to_write))
 
     @staticmethod
-    def get_ignored_files(ignore_file: Path) -> Set[str]:
+    def get_ignored_files(ignore_file: str) -> Set[str]:
         """Получение списка всех игнорируемых файлов"""
         result = set()
         ignore_list = [".cvs/"]
+        ignore_file = Path(ignore_file)
         if ignore_file.exists():
             ignore_list.extend(ignore_file.read_text().split("\n"))
         for line in filter(lambda x: x, ignore_list):
