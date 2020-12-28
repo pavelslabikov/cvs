@@ -1,4 +1,5 @@
 import hashlib
+from datetime import datetime
 from pathlib import Path
 from cvs.models.tree import TreeNode
 
@@ -8,6 +9,7 @@ class Commit:
         self.tree = root
         self.message = message
         self.parent = parent
+        self.date = str(datetime.now())
         self._hash_obj = hashlib.sha1(str(self).encode("utf-8"))
 
     @property
@@ -28,5 +30,6 @@ class Commit:
 
     def __str__(self):
         return (
-            f"{str(self.tree)}\nparent {self.parent}\n\n{self.message}"
+            f"{str(self.tree)}\nparent {self.parent}\ndate {self.date}"
+            f"\n\n{self.message}"
         )

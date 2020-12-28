@@ -1,8 +1,9 @@
 import logging
+import fnmatch
 
 from cvs import errors, config
 from pathlib import Path
-from typing import Set, List, Dict
+from typing import List, Dict
 from cvs.models.blob import Blob
 from cvs.utils.factories import BlobFactory
 
@@ -12,10 +13,10 @@ logger = logging.getLogger(__name__)
 class FileIndex:
     BLOB_STORAGE = str(config.BLOBS_PATH)
 
-    def __init__(self, path_to_index: str, path_to_ignore: str):
-        self._location = Path(path_to_index)
+    def __init__(self, path_to_index: Path, path_to_ignore: Path):
+        self._location = path_to_index
         if not self._location.exists():
-            raise errors.IndexFileNotFoundError(path_to_index)
+            raise errors.IndexFileNotFoundError(str(path_to_index))
         self.indexed_files = self.get_indexed_files()
         self.ignored_files = self.get_ignored_files(path_to_ignore)
 
@@ -27,9 +28,15 @@ class FileIndex:
     def blobs(self) -> List[Blob]:
         return sorted(self.indexed_files.values())
 
+    def is_ignored(self, filename: str) -> bool:
+        for pattern in self.ignored_files:
+            if fnmatch.fnmatch(filename, pattern):
+                return True
+        return False
+
     def add_file(self, path: str) -> None:
         """Добавление файла в индекс"""
-        if path in self.ignored_files:
+        if self.is_ignored(path):
             return
 
         blob = BlobFactory.create_new_blob(file=path)
@@ -58,22 +65,21 @@ class FileIndex:
         for blob in self.blobs:
             if (
                 Path(blob.filename).exists()
-                and blob.filename not in self.ignored_files
+                and not self.is_ignored(blob.filename)
             ):
                 content_to_write.append(str(blob))
         self._location.write_text("\n".join(content_to_write))
 
     @staticmethod
-    def get_ignored_files(ignore_file: str) -> Set[str]:
+    def get_ignored_files(ignore_file: Path) -> List[str]:
         """Получение списка всех игнорируемых файлов"""
-        result = set()
-        ignore_list = [".cvs/"]
-        ignore_file = Path(ignore_file)
-        if ignore_file.exists():
-            ignore_list.extend(ignore_file.read_text().split("\n"))
-        for line in filter(lambda x: x, ignore_list):
-            if line.endswith("/"):
-                line += "/**/*"
-            for path in Path().glob(line):
-                result.add(str(path))
-        return result
+        ignore_list = [".cvs/**/*", ".cvs/*"]
+        if not ignore_file.exists():
+            return ignore_list
+        for pattern in ignore_file.read_text().split("\n"):
+            if pattern.endswith("/"):
+                ignore_list.append(f"{pattern}**/*")
+                ignore_list.append(f"{pattern}*")
+            else:
+                ignore_list.append(pattern)
+        return ignore_list

@@ -26,7 +26,7 @@ class VersionsSystem:
 
     def add_to_staging_area(self, path: str) -> None:
         path = os.path.relpath(path)
-        index = FileIndex(str(config.INDEX_PATH), str(config.IGNORE_PATH))
+        index = FileIndex(config.INDEX_PATH, config.IGNORE_PATH)
         if os.path.isfile(path):
             self._view.display_text(f"Adding file {path} to index...")
             index.add_file(path)
@@ -38,7 +38,7 @@ class VersionsSystem:
         index.refresh_file()
 
     def make_commit(self, message: str) -> None:
-        index = FileIndex(str(config.INDEX_PATH), str(config.IGNORE_PATH))
+        index = FileIndex(config.INDEX_PATH, config.IGNORE_PATH)
         if index.is_empty:
             self._view.display_text("Nothing to commit - index is empty")
             return
@@ -71,7 +71,7 @@ class VersionsSystem:
             logger.debug(f"Current commit hash: {last_commit}")
             path_to_commit = config.COMMITS_PATH / last_commit
             commit_content = path_to_commit.read_text()
-            self._view.display_text(commit_content)
+            self._view.display_text(f"{commit_content}\n")
             last_commit = commit_content.splitlines()[1].split(" ")[1]
 
     def has_changes(self, file: str, blob_hash: str) -> bool:
@@ -81,16 +81,15 @@ class VersionsSystem:
         return blob_hash != actual_hash
 
     def show_status(self) -> None:
-        index = FileIndex(str(config.INDEX_PATH), str(config.IGNORE_PATH))
+        index = FileIndex(config.INDEX_PATH, config.IGNORE_PATH)
         all_files = [str(x) for x in Path().glob("**/*") if x.is_file()]
         self._view.display_text("Неиндексированные файлы/изменения:\n")
         for file in all_files:
             blob = index.indexed_files.get(file)
-            if not blob and file not in index.ignored_files:
+            if not blob and not index.is_ignored(file):
                 self._view.display_text(f"not staged: {file}")
 
             if blob and self.has_changes(file, blob.content_hash):
                 self._view.display_text(f"modified: {file}")
-        self._view.display_text("\nТекущее содержимое индекса:")
+        self._view.display_text("\nТекущее содержимое файла индекса:")
         self._view.display_text("\n".join(index.indexed_files.keys()))
-
