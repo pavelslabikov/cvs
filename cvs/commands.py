@@ -64,3 +64,13 @@ class LogCommand(CvsCommand):
 
     def _execute(self):
         self._app.show_logs()
+
+
+class StatusCommand(CvsCommand):
+    def _validate_args(self) -> None:
+        if not config.MAIN_PATH.exists():
+            raise errors.RepoNotFoundError(os.getcwd())
+
+    def _execute(self):
+        self._app.show_status()
+

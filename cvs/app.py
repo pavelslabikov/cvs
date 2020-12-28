@@ -1,5 +1,7 @@
+import hashlib
 import logging
 import os
+import zlib
 
 from pathlib import Path
 from cvs.models.index import FileIndex
@@ -71,3 +73,24 @@ class VersionsSystem:
             commit_content = path_to_commit.read_text()
             self._view.display_text(commit_content)
             last_commit = commit_content.splitlines()[1].split(" ")[1]
+
+    def has_changes(self, file: str, blob_hash: str) -> bool:
+        raw_content = Path(file).read_bytes()
+        compressed = zlib.compress(raw_content)
+        actual_hash = hashlib.sha1(compressed).hexdigest()
+        return blob_hash != actual_hash
+
+    def show_status(self) -> None:
+        index = FileIndex(str(config.INDEX_PATH), str(config.IGNORE_PATH))
+        all_files = [str(x) for x in Path().glob("**/*") if x.is_file()]
+        self._view.display_text("Неиндексированные файлы/изменения:\n")
+        for file in all_files:
+            blob = index.indexed_files.get(file)
+            if not blob and file not in index.ignored_files:
+                self._view.display_text(f"not staged: {file}")
+
+            if blob and self.has_changes(file, blob.content_hash):
+                self._view.display_text(f"modified: {file}")
+        self._view.display_text("\nТекущее содержимое индекса:")
+        self._view.display_text("\n".join(index.indexed_files.keys()))
+

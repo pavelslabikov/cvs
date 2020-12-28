@@ -17,7 +17,7 @@ class FileIndex:
         if not self._location.exists():
             raise errors.IndexFileNotFoundError(path_to_index)
         self.indexed_files = self.get_indexed_files()
-        self._ignored_files = self.get_ignored_files(path_to_ignore)
+        self.ignored_files = self.get_ignored_files(path_to_ignore)
 
     @property
     def is_empty(self) -> bool:
@@ -29,12 +29,12 @@ class FileIndex:
 
     def add_file(self, path: str) -> None:
         """Добавление файла в индекс"""
-        if path in self._ignored_files:
+        if path in self.ignored_files:
             return
 
         blob = BlobFactory.create_new_blob(file=path)
         if self.indexed_files.get(path) == blob:
-            logger.info(f"File {path} is already indexed!")
+            logger.info(f"File {path} is already indexed!" + blob.content_hash)
             return
 
         self.indexed_files[path] = blob
@@ -58,7 +58,7 @@ class FileIndex:
         for blob in self.blobs:
             if (
                 Path(blob.filename).exists()
-                and blob.filename not in self._ignored_files
+                and blob.filename not in self.ignored_files
             ):
                 content_to_write.append(str(blob))
         self._location.write_text("\n".join(content_to_write))

@@ -15,7 +15,7 @@ class TreeFactory:
     def create_new_tree(cls, blobs: Iterable[Blob]) -> TreeNode:
         root = TreeNode(".")
         for blob in blobs:
-            file_content = bytes.fromhex(blob.content_hash)
+            file_content = blob.compressed_data
             curr_node = root
             for file in blob.filename.split(os.sep):
                 curr_node.update_hash(file_content)

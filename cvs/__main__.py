@@ -15,6 +15,8 @@ def get_command(command_name: str) -> commands.CvsCommand:
         return commands.LogCommand(app)
     elif command_name == "commit" or command_name == "com":
         return commands.CommitCommand(app, cmd_args.comment)
+    elif command_name == "status":
+        return commands.StatusCommand(app)
 
 
 def set_up_arguments() -> None:
@@ -29,6 +31,7 @@ def set_up_arguments() -> None:
     )
     parser_add = subparsers.add_parser("add", help="Индексировать файл(ы)")
     subparsers.add_parser("log", help="Вывести историю коммитов")
+    subparsers.add_parser("status", help="Показать статус")
 
     parser.add_argument(
         "-d", "--debug", action="store_true", help="Запуск в режиме отладки"
