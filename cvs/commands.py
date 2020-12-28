@@ -4,27 +4,31 @@ import abc
 from cvs import errors, config
 from cvs.app import VersionsSystem
 
+REGISTRY = {}
+
 
 class CvsCommand(abc.ABC):
-    def __init__(self, app: VersionsSystem, *args):
+    def __init__(self, app: VersionsSystem):
         self._app = app
-        self._args = args
+
+    def __init_subclass__(cls, alias=""):
+        REGISTRY[alias] = cls
 
     @abc.abstractmethod
-    def _validate_args(self) -> None:
+    def _validate(self, *args) -> None:
         pass
 
     @abc.abstractmethod
     def _execute(self, *args):
         pass
 
-    def execute(self):
-        self._validate_args()
-        self._execute(*self._args)
+    def __call__(self, *args):
+        self._validate(*args)
+        self._execute(*args)
 
 
-class InitCommand(CvsCommand):
-    def _validate_args(self) -> None:
+class InitCommand(CvsCommand, alias="init"):
+    def _validate(self) -> None:
         if config.MAIN_PATH.exists():
             raise errors.RepoAlreadyExistError(os.getcwd())
 
@@ -32,9 +36,8 @@ class InitCommand(CvsCommand):
         self._app.initialize_repo()
 
 
-class AddCommand(CvsCommand):
-    def _validate_args(self) -> None:
-        (path_to_add,) = self._args
+class AddCommand(CvsCommand, alias="add"):
+    def _validate(self, path_to_add: str) -> None:
         if not os.path.exists(path_to_add):
             raise errors.InvalidPathError(path_to_add)
         path_to_add = os.path.realpath(path_to_add)
@@ -48,8 +51,8 @@ class AddCommand(CvsCommand):
         self._app.add_to_staging_area(path=path_to_index)
 
 
-class CommitCommand(CvsCommand):
-    def _validate_args(self) -> None:
+class CommitCommand(CvsCommand, alias="commit"):
+    def _validate(self, message: str) -> None:
         if not config.MAIN_PATH.exists():
             raise errors.RepoNotFoundError(os.getcwd())
 
@@ -57,8 +60,8 @@ class CommitCommand(CvsCommand):
         self._app.make_commit(message)
 
 
-class LogCommand(CvsCommand):
-    def _validate_args(self) -> None:
+class LogCommand(CvsCommand, alias="log"):
+    def _validate(self) -> None:
         if not config.MAIN_PATH.exists():
             raise errors.RepoNotFoundError(os.getcwd())
 
@@ -66,8 +69,8 @@ class LogCommand(CvsCommand):
         self._app.show_logs()
 
 
-class StatusCommand(CvsCommand):
-    def _validate_args(self) -> None:
+class StatusCommand(CvsCommand, alias="status"):
+    def _validate(self) -> None:
         if not config.MAIN_PATH.exists():
             raise errors.RepoNotFoundError(os.getcwd())
 

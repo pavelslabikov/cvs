@@ -1,22 +1,17 @@
 import argparse
 import logging
+
 from cvs import errors
 from cvs.app import VersionsSystem
 from cvs.view import CliView
 from cvs import commands
 
 
-def get_command(command_name: str) -> commands.CvsCommand:
-    if command_name == "init" or command_name == "ini":
-        return commands.InitCommand(app)
-    elif command_name == "add":
-        return commands.AddCommand(app, cmd_args.path)
-    elif command_name == "log":
-        return commands.LogCommand(app)
-    elif command_name == "commit" or command_name == "com":
-        return commands.CommitCommand(app, cmd_args.comment)
-    elif command_name == "status":
-        return commands.StatusCommand(app)
+def extract_arguments(command_name: str) -> tuple:
+    if command_name == "add":
+        return raw_args.path,
+    elif command_name == "commit":
+        return raw_args.comment,
 
 
 def set_up_arguments() -> None:
@@ -24,10 +19,10 @@ def set_up_arguments() -> None:
         dest="command", required=True, metavar="<command>"
     )
     subparsers.add_parser(
-        "init", help="Инициализировать репозиторий", aliases=["ini"]
+        "init", help="Инициализировать репозиторий"
     )
     parser_commit = subparsers.add_parser(
-        "commit", help="Сделать коммит", aliases=["com"]
+        "commit", help="Сделать коммит"
     )
     parser_add = subparsers.add_parser("add", help="Индексировать файл(ы)")
     subparsers.add_parser("log", help="Вывести историю коммитов")
@@ -47,17 +42,16 @@ if __name__ == "__main__":
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     set_up_arguments()
-    cmd_args = parser.parse_args()
+    raw_args = parser.parse_args()
     app = VersionsSystem(CliView())
 
     logging.basicConfig(
-        level=logging.DEBUG if cmd_args.debug else logging.ERROR
+        level=logging.DEBUG if raw_args.debug else logging.ERROR
     )
     logger = logging.getLogger(__name__)
     try:
-        command = get_command(cmd_args.command)
-        logger.info(f"Executing command: {cmd_args.command}")
-        command.execute()
+        command = commands.REGISTRY[raw_args.command](app)
+        command(*extract_arguments(raw_args.command))
     except errors.APIError as e:
         logger.error(f"API error occurred: {str(e)}")
     except Exception as e:

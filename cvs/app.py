@@ -28,10 +28,7 @@ class VersionsSystem:
         path = os.path.relpath(path)
         index = FileIndex(config.INDEX_PATH, config.IGNORE_PATH)
         if os.path.isfile(path):
-            self._view.display_text(f"Adding file {path} to index...")
             index.add_file(path)
-        else:
-            self._view.display_text(f"Adding directory {path} to index...")
         files_to_add = [str(x) for x in Path(path).glob("**/*") if x.is_file()]
         for file in files_to_add:
             index.add_file(file)
@@ -93,3 +90,14 @@ class VersionsSystem:
                 self._view.display_text(f"modified: {file}")
         self._view.display_text("\nТекущее содержимое файла индекса:")
         self._view.display_text("\n".join(index.indexed_files.keys()))
+
+    def checkout(self, commit: str) -> None:
+        commit_file = config.COMMITS_PATH / commit
+        if not commit_file.exists():
+            self._view.display_text(f"Не удалось найти коммит: {commit}")
+        root_hash = commit_file.read_text().split("\n")[0].split(" ")[1]
+        curr_tree = config.TREES_PATH / root_hash
+        curr_dir = Path()
+
+
+
