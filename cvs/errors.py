@@ -32,3 +32,12 @@ class IndexFileNotFoundError(APIError):
 
     def __str__(self):
         return f"Не удалось найти файл индекса в {self.arg}"
+
+
+class CommitNotFoundError(APIError):
+    def __init__(self, commit: str):
+        self.arg = commit
+
+    def __str__(self):
+        return f"Не удалось найти коммит: {self.arg}"
+

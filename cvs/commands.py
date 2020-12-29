@@ -77,3 +77,14 @@ class StatusCommand(CvsCommand, alias="status"):
     def _execute(self):
         self._app.show_status()
 
+
+class CheckoutCommand(CvsCommand, alias="checkout"):
+    def _validate(self, commit: str) -> None:
+        if not config.MAIN_PATH.exists():
+            raise errors.RepoNotFoundError(os.getcwd())
+        if not (config.COMMITS_PATH / commit).exists():
+            errors.CommitNotFoundError(commit)
+
+    def _execute(self, commit: str):
+        self._app.checkout(commit)
+

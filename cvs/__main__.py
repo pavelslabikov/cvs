@@ -12,6 +12,9 @@ def extract_arguments(command_name: str) -> tuple:
         return raw_args.path,
     elif command_name == "commit":
         return raw_args.comment,
+    elif command_name == "checkout":
+        return raw_args.commit,
+    return ()
 
 
 def set_up_arguments() -> None:
@@ -24,6 +27,9 @@ def set_up_arguments() -> None:
     parser_commit = subparsers.add_parser(
         "commit", help="Сделать коммит"
     )
+    parser_checkout = subparsers.add_parser(
+        "checkout", help="Переключиться на коммит"
+    )
     parser_add = subparsers.add_parser("add", help="Индексировать файл(ы)")
     subparsers.add_parser("log", help="Вывести историю коммитов")
     subparsers.add_parser("status", help="Показать статус")
@@ -35,6 +41,7 @@ def set_up_arguments() -> None:
     parser_commit.add_argument(
         "comment", type=str, help="Комментарий к коммиту"
     )
+    parser_checkout.add_argument("commit", type=str, help="Хэш коммита")
 
 
 if __name__ == "__main__":

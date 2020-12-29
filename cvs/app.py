@@ -20,7 +20,8 @@ class VersionsSystem:
     def initialize_repo(self) -> None:
         config.create_dirs()
         config.INDEX_PATH.write_text("")
-        config.HEAD_PATH.write_text(os.path.join(".cvs", "refs", "master"))
+        config.HEAD_PATH.write_text("master")
+        (config.REFS_PATH / "master").write_text("root")
         self._view.display_text("Successfully initialized new repository")
         self._current_branch = config.HEAD_PATH.read_text()
 
@@ -49,19 +50,12 @@ class VersionsSystem:
         commit.create_file(str(config.COMMITS_PATH))
         root_tree.create_file(str(config.TREES_PATH))
         current_branch = config.HEAD_PATH.read_text()
-        with open(current_branch, "w") as file:
-            file.write(commit.content_hash)
+        (config.REFS_PATH / current_branch).write_text(commit.content_hash)
         self._view.display_text(f"Created new commit: {commit.content_hash}")
 
     def show_logs(self) -> None:
         current_branch = config.HEAD_PATH.read_text()
-        branch_file = Path(current_branch)
-        if not branch_file.exists():
-            self._view.display_text(
-                f"No commit history for branch {current_branch}"
-            )
-            return
-
+        branch_file = config.REFS_PATH / current_branch
         last_commit = branch_file.read_text()
         logger.debug(f"Last commit hash: {last_commit}")
         while last_commit != "root":
@@ -78,13 +72,14 @@ class VersionsSystem:
         return blob_hash != actual_hash
 
     def show_status(self) -> None:
+        self._view.display_text(f"HEAD -> {config.HEAD_PATH.read_text()}")
         index = FileIndex(config.INDEX_PATH, config.IGNORE_PATH)
         all_files = [str(x) for x in Path().glob("**/*") if x.is_file()]
         self._view.display_text("Неиндексированные файлы/изменения:\n")
         for file in all_files:
             blob = index.indexed_files.get(file)
             if not blob and not index.is_ignored(file):
-                self._view.display_text(f"not staged: {file}")
+                self._view.display_text(f"new file: {file}")
 
             if blob and self.has_changes(file, blob.content_hash):
                 self._view.display_text(f"modified: {file}")
@@ -92,12 +87,29 @@ class VersionsSystem:
         self._view.display_text("\n".join(index.indexed_files.keys()))
 
     def checkout(self, commit: str) -> None:
+        new_index = {}
         commit_file = config.COMMITS_PATH / commit
-        if not commit_file.exists():
-            self._view.display_text(f"Не удалось найти коммит: {commit}")
-        root_hash = commit_file.read_text().split("\n")[0].split(" ")[1]
-        curr_tree = config.TREES_PATH / root_hash
-        curr_dir = Path()
+        config.HEAD_PATH.write_text(commit)
+        root_hash = commit_file.read_text().split("\n")[0].split(" ")[1]  # TODO: Добавить создание ссылки в refs
+        self.traverse_tree(root_hash, Path(), new_index)
+        content_to_write = []
+        for file in sorted(new_index.keys()):
+            content_to_write.append(f"{file} {new_index[file]}")
+        config.INDEX_PATH.write_text("\n".join(content_to_write))
+
+    def traverse_tree(self, tree_hash: str, curr_dir: Path, new_index: dict):
+        curr_tree = config.TREES_PATH / tree_hash
+        tree_content = curr_tree.read_text().split("\n")
+        for line in tree_content:
+            obj_type, hashcode, filename = line.split(" ")
+            logger.debug(f"Working with {obj_type}, {hashcode}, {filename}")
+            if obj_type == "blob":
+                new_index[filename] = hashcode
+                blob_content = (config.BLOBS_PATH / hashcode).read_bytes()
+                path = curr_dir / filename
+                path.write_bytes(zlib.decompress(blob_content))
+            else:
+                self.traverse_tree(hashcode, curr_dir / filename, new_index)
 
 
 
