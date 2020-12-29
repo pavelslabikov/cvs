@@ -86,5 +86,5 @@ class CheckoutCommand(CvsCommand, alias="checkout"):
             errors.CommitNotFoundError(commit)
 
     def _execute(self, commit: str):
-        self._app.checkout(commit)
+        self._app.checkout_commit(commit)
 

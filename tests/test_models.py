@@ -23,7 +23,7 @@ def test_adding_to_index(temp_dir, path: str, file_content: str):
     file_to_add.write_text(file_content)
     test_index = Path(temp_dir.name) / "index"
     test_index.write_text("")
-    index = FileIndex(str(test_index), "tests/.ignore")
+    index = FileIndex(test_index, Path("tests/.ignore"))
     index.BLOB_STORAGE = temp_dir.name
     index.add_file(str(file_to_add))
     assert str(file_to_add) in index.indexed_files

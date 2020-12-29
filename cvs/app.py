@@ -4,6 +4,7 @@ import os
 import zlib
 
 from pathlib import Path
+from cvs.models.commit import Commit
 from cvs.models.index import FileIndex
 from cvs.utils.factories import TreeFactory, CommitFactory
 from cvs.view import BaseView
@@ -22,7 +23,7 @@ class VersionsSystem:
         config.INDEX_PATH.write_text("")
         config.HEAD_PATH.write_text("master")
         (config.REFS_PATH / "master").write_text("root")
-        self._view.display_text("Successfully initialized new repository")
+        self._view.display_text("Инициализирован новый репозиторий")
         self._current_branch = config.HEAD_PATH.read_text()
 
     def add_to_staging_area(self, path: str) -> None:
@@ -38,32 +39,37 @@ class VersionsSystem:
     def make_commit(self, message: str) -> None:
         index = FileIndex(config.INDEX_PATH, config.IGNORE_PATH)
         if index.is_empty:
-            self._view.display_text("Nothing to commit - index is empty")
+            self._view.display_text("Нечего коммитить - индекс пуст")
             return
 
         root_tree = TreeFactory.create_new_tree(index.blobs)
         commit = CommitFactory.create_new_commit(root_tree, message)
         if commit.is_same_with_parent(config.COMMITS_PATH):
-            self._view.display_text("Nothing to commit - no changes detected")
+            self._view.display_text("Нечего коммитить - нет изменений")
             return
 
         commit.create_file(str(config.COMMITS_PATH))
         root_tree.create_file(str(config.TREES_PATH))
         current_branch = config.HEAD_PATH.read_text()
-        (config.REFS_PATH / current_branch).write_text(commit.content_hash)
-        self._view.display_text(f"Created new commit: {commit.content_hash}")
+        if current_branch == commit.parent:
+            config.HEAD_PATH.write_text(commit.content_hash)
+        else:
+            (config.REFS_PATH / current_branch).write_text(commit.content_hash)
+        self._view.display_text(f"Новый коммит: {commit.content_hash}")
 
     def show_logs(self) -> None:
-        current_branch = config.HEAD_PATH.read_text()
-        branch_file = config.REFS_PATH / current_branch
-        last_commit = branch_file.read_text()
-        logger.debug(f"Last commit hash: {last_commit}")
-        while last_commit != "root":
-            logger.debug(f"Current commit hash: {last_commit}")
-            path_to_commit = config.COMMITS_PATH / last_commit
+        current_commit = config.HEAD_PATH.read_text()
+        branch_file = config.REFS_PATH / current_commit
+        if branch_file.exists():
+            current_commit = branch_file.read_text()
+        logger.debug(f"Last commit hash: {current_commit}")
+        while current_commit != "root":
+            logger.debug(f"Current commit hash: {current_commit}")
+            path_to_commit = config.COMMITS_PATH / current_commit
             commit_content = path_to_commit.read_text()
+            self._view.display_text(f"\nCommit - {current_commit}")
             self._view.display_text(f"{commit_content}\n")
-            last_commit = commit_content.splitlines()[1].split(" ")[1]
+            current_commit = commit_content.splitlines()[1].split(" ")[1]
 
     def has_changes(self, file: str, blob_hash: str) -> bool:
         raw_content = Path(file).read_bytes()
@@ -86,12 +92,13 @@ class VersionsSystem:
         self._view.display_text("\nТекущее содержимое файла индекса:")
         self._view.display_text("\n".join(index.indexed_files.keys()))
 
-    def checkout(self, commit: str) -> None:
+    def checkout_commit(self, commit: str) -> None:
+        if commit == config.HEAD_PATH.read_text():
+            self._view.display_text("Вы уже на данном коммите")
         new_index = {}
-        commit_file = config.COMMITS_PATH / commit
         config.HEAD_PATH.write_text(commit)
-        root_hash = commit_file.read_text().split("\n")[0].split(" ")[1]  # TODO: Добавить создание ссылки в refs
-        self.traverse_tree(root_hash, Path(), new_index)
+        tree_hash, parent_commit = Commit.parse_file_content(commit)  # TODO: fix
+        self.traverse_tree(tree_hash, Path(), new_index)
         content_to_write = []
         for file in sorted(new_index.keys()):
             content_to_write.append(f"{file} {new_index[file]}")
@@ -102,7 +109,6 @@ class VersionsSystem:
         tree_content = curr_tree.read_text().split("\n")
         for line in tree_content:
             obj_type, hashcode, filename = line.split(" ")
-            logger.debug(f"Working with {obj_type}, {hashcode}, {filename}")
             if obj_type == "blob":
                 new_index[filename] = hashcode
                 blob_content = (config.BLOBS_PATH / hashcode).read_bytes()

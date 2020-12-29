@@ -47,4 +47,7 @@ class CommitFactory:
     def create_new_commit(cls, tree: TreeNode, message: str) -> Commit:
         current_branch = config.HEAD_PATH.read_text()
         parent_path = config.REFS_PATH / current_branch
+        if not parent_path.exists():
+            parent = Commit.parse_file_content(current_branch)[1]
+            return Commit(tree, message, parent)
         return Commit(tree, message, parent_path.read_text())

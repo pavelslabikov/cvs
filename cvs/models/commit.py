@@ -1,6 +1,8 @@
 import hashlib
 from datetime import datetime
 from pathlib import Path
+
+from cvs import config
 from cvs.models.tree import TreeNode
 
 
@@ -27,6 +29,12 @@ class Commit:
     def create_file(self, destination: str):
         commit_path = Path(destination) / self.content_hash
         commit_path.write_text(str(self))
+
+    @classmethod
+    def parse_file_content(cls, commit_hash: str) -> tuple:
+        commit_file = config.COMMITS_PATH / commit_hash
+        lines = commit_file.read_text().split("\n")
+        return lines[0].split(" ")[1], lines[1].split(" ")[1]
 
     def __str__(self):
         return (
