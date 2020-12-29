@@ -40,4 +40,3 @@ class CommitNotFoundError(APIError):
 
     def __str__(self):
         return f"Не удалось найти коммит: {self.arg}"
-

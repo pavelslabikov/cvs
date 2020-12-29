@@ -63,9 +63,8 @@ class FileIndex:
         """Запись содержимого индекса в файл"""
         content_to_write = []
         for blob in self.blobs:
-            if (
-                Path(blob.filename).exists()
-                and not self.is_ignored(blob.filename)
+            if Path(blob.filename).exists() and not self.is_ignored(
+                blob.filename
             ):
                 content_to_write.append(str(blob))
         self._location.write_text("\n".join(content_to_write))

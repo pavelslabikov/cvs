@@ -26,8 +26,8 @@ class Commit:
         commit_content = parent_path.read_text()
         return commit_content.startswith(str(self.tree))
 
-    def create_file(self, destination: str):
-        commit_path = Path(destination) / self.content_hash
+    def create_file(self, destination: Path):
+        commit_path = destination / self.content_hash
         commit_path.write_text(str(self))
 
     @classmethod

@@ -17,9 +17,9 @@ class TreeNode(NodeMixin):
     def update_hash(self, hash_code: bytes) -> None:
         self._hash_obj.update(hash_code)
 
-    def create_file(self, destination: str) -> None:
+    def create_file(self, destination: Path) -> None:
         for tree in LevelOrderIter(self, lambda node: not node.is_leaf):
-            curr_obj_path = Path(destination) / tree.content_hash
+            curr_obj_path = destination / tree.content_hash
             content = [str(child) for child in tree.children]
             with curr_obj_path.open("w") as file:
                 file.write("\n".join(content))

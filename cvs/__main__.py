@@ -2,18 +2,17 @@ import argparse
 import logging
 
 from cvs import errors
-from cvs.app import VersionsSystem
 from cvs.view import CliView
 from cvs import commands
 
 
 def extract_arguments(command_name: str) -> tuple:
     if command_name == "add":
-        return raw_args.path,
+        return (raw_args.path,)
     elif command_name == "commit":
-        return raw_args.comment,
+        return (raw_args.comment,)
     elif command_name == "checkout":
-        return raw_args.commit,
+        return (raw_args.commit,)
     return ()
 
 
@@ -21,12 +20,8 @@ def set_up_arguments() -> None:
     subparsers = parser.add_subparsers(
         dest="command", required=True, metavar="<command>"
     )
-    subparsers.add_parser(
-        "init", help="Инициализировать репозиторий"
-    )
-    parser_commit = subparsers.add_parser(
-        "commit", help="Сделать коммит"
-    )
+    subparsers.add_parser("init", help="Инициализировать репозиторий")
+    parser_commit = subparsers.add_parser("commit", help="Сделать коммит")
     parser_checkout = subparsers.add_parser(
         "checkout", help="Переключиться на коммит"
     )
@@ -50,14 +45,13 @@ if __name__ == "__main__":
     )
     set_up_arguments()
     raw_args = parser.parse_args()
-    app = VersionsSystem(CliView())
 
     logging.basicConfig(
         level=logging.DEBUG if raw_args.debug else logging.ERROR
     )
     logger = logging.getLogger(__name__)
     try:
-        command = commands.REGISTRY[raw_args.command](app)
+        command = commands.REGISTRY[raw_args.command](CliView())
         command(*extract_arguments(raw_args.command))
     except errors.APIError as e:
         logger.error(f"API error occurred: {str(e)}")

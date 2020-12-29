@@ -29,6 +29,6 @@ def test_creating_tree(blobs: list):
     actual_tree = factories.TreeFactory.create_new_tree(blobs)
     hashcode = hashlib.sha1()
     for blob in blobs:
-        hashcode.update(bytes.fromhex(blob.content_hash))
+        hashcode.update(blob.compressed_data)
     assert hashcode.hexdigest() == actual_tree.content_hash
     assert actual_tree.parent is None
