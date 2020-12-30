@@ -22,9 +22,7 @@ def test_creating_blob_file(temp_dir, blob: Blob):
 
 @pytest.mark.parametrize(
     "commit",
-    [
-        Commit(TreeNode("test"), "msg", "root")
-    ],
+    [Commit(TreeNode("test"), "msg", "root")],
 )
 def test_creating_commit_file(temp_dir, commit: Commit):
     test_path = Path(temp_dir.name)

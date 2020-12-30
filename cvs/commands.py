@@ -98,7 +98,9 @@ class CommitCommand(CvsCommand, alias="commit"):
         if self.head_pointer == commit.parent:
             config.HEAD_PATH.write_text(commit.content_hash)
         else:
-            (config.REFS_PATH / self.head_pointer).write_text(commit.content_hash)
+            (config.REFS_PATH / self.head_pointer).write_text(
+                commit.content_hash
+            )
         self.view.display_text(f"Новый коммит: {commit.content_hash}")
 
 

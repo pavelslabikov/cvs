@@ -8,11 +8,11 @@ from cvs.view import CliView
 
 def extract_arguments(command_name: str) -> tuple:
     if command_name == "add":
-        return raw_args.path,
+        return (raw_args.path,)
     elif command_name == "commit":
-        return raw_args.comment,
+        return (raw_args.comment,)
     elif command_name == "checkout":
-        return raw_args.commit,
+        return (raw_args.commit,)
     return ()
 
 
