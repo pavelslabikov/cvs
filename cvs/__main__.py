@@ -2,17 +2,17 @@ import argparse
 import logging
 
 from cvs import errors
+from cvs.commands import CvsCommand
 from cvs.view import CliView
-from cvs import commands
 
 
 def extract_arguments(command_name: str) -> tuple:
     if command_name == "add":
-        return (raw_args.path,)
+        return raw_args.path,
     elif command_name == "commit":
-        return (raw_args.comment,)
+        return raw_args.comment,
     elif command_name == "checkout":
-        return (raw_args.commit,)
+        return raw_args.commit,
     return ()
 
 
@@ -51,7 +51,7 @@ if __name__ == "__main__":
     )
     logger = logging.getLogger(__name__)
     try:
-        command = commands.REGISTRY[raw_args.command](CliView())
+        command = CvsCommand.REGISTRY[raw_args.command](CliView())
         command(*extract_arguments(raw_args.command))
     except errors.APIError as e:
         logger.error(f"API error occurred: {str(e)}")

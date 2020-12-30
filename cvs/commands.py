@@ -1,4 +1,3 @@
-import hashlib
 import os
 import abc
 import zlib
@@ -10,22 +9,26 @@ from cvs.models.index import FileIndex
 from cvs.utils.factories import TreeFactory, CommitFactory
 from cvs.view import BaseView
 
-REGISTRY = {}
-
 
 class CvsCommand(abc.ABC):
+    REGISTRY = {}
+
     def __init__(self, view: BaseView):
         self.view = view
         self._index = None
 
     def __init_subclass__(cls, alias=""):
-        REGISTRY[alias] = cls
+        cls.REGISTRY[alias] = cls
 
     @property
     def index(self):
         if not self._index:
             self._index = FileIndex(config.INDEX_PATH, config.IGNORE_PATH)
         return self._index
+
+    @property
+    def head_pointer(self):
+        return config.HEAD_PATH.read_text()
 
     @abc.abstractmethod
     def _validate(self, *args) -> None:
@@ -92,11 +95,10 @@ class CommitCommand(CvsCommand, alias="commit"):
 
         commit.create_file(config.COMMITS_PATH)
         root_tree.create_file(config.TREES_PATH)
-        current_branch = config.HEAD_PATH.read_text()
-        if current_branch == commit.parent:
+        if self.head_pointer == commit.parent:
             config.HEAD_PATH.write_text(commit.content_hash)
         else:
-            (config.REFS_PATH / current_branch).write_text(commit.content_hash)
+            (config.REFS_PATH / self.head_pointer).write_text(commit.content_hash)
         self.view.display_text(f"Новый коммит: {commit.content_hash}")
 
 
@@ -106,7 +108,7 @@ class LogCommand(CvsCommand, alias="log"):
             raise errors.RepoNotFoundError(os.getcwd())
 
     def _execute(self):
-        current_commit = config.HEAD_PATH.read_text()
+        current_commit = self.head_pointer
         branch_file = config.REFS_PATH / current_commit
         if branch_file.exists():
             current_commit = branch_file.read_text()
@@ -124,24 +126,20 @@ class StatusCommand(CvsCommand, alias="status"):
             raise errors.RepoNotFoundError(os.getcwd())
 
     def _execute(self):
-        self.view.display_text(f"HEAD -> {config.HEAD_PATH.read_text()}")
-        all_files = [str(x) for x in Path().glob("**/*") if x.is_file()]
+        self.view.display_text(f"HEAD -> {self.head_pointer}")
         self.view.display_text("Неиндексированные файлы/изменения:\n")
-        for file in all_files:
+        for path in Path().glob("**/*"):
+            if not path.is_file():
+                continue
+            file = str(path)
             blob = self.index.indexed_files.get(file)
             if not blob and not self.index.is_ignored(file):
                 self.view.display_text(f"new file: {file}")
 
-            if blob and self.has_changes(file, blob.content_hash):
+            if blob and not blob.is_same_with_file(Path(file)):
                 self.view.display_text(f"modified: {file}")
         self.view.display_text("\nТекущее содержимое файла индекса:")
         self.view.display_text("\n".join(self.index.indexed_files.keys()))
-
-    def has_changes(self, file: str, blob_hash: str) -> bool:
-        raw_content = Path(file).read_bytes()
-        compressed = zlib.compress(raw_content)
-        actual_hash = hashlib.sha1(compressed).hexdigest()
-        return blob_hash != actual_hash
 
 
 class CheckoutCommand(CvsCommand, alias="checkout"):
@@ -152,7 +150,7 @@ class CheckoutCommand(CvsCommand, alias="checkout"):
             errors.CommitNotFoundError(commit)
 
     def _execute(self, commit: str):
-        if commit == config.HEAD_PATH.read_text():
+        if commit == self.head_pointer:
             self.view.display_text("Вы уже на данном коммите")
         new_index = {}
         config.HEAD_PATH.write_text(commit)

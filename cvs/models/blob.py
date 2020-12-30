@@ -1,4 +1,5 @@
 import hashlib
+import zlib
 from pathlib import Path
 
 
@@ -15,6 +16,12 @@ class Blob:
     @property
     def filename(self) -> str:
         return self._filename
+
+    def is_same_with_file(self, path: Path):
+        file_content = path.read_bytes()
+        compressed_content = zlib.compress(file_content)
+        file_hash = hashlib.sha1(compressed_content).hexdigest()
+        return file_hash == self.content_hash
 
     def create_file(self, destination: str) -> None:
         path_to_blob = Path(destination) / self.content_hash
